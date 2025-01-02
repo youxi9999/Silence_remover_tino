@@ -6,34 +6,7 @@ import threading
 import subprocess  # 添加这行
 from pydub import AudioSegment  # 用于音频处理
 from pydub.silence import split_on_silence  # 用于检测和分割静音部分
-
-def convert_png_to_ico(png_path):
-    try:
-        from PIL import Image
-        ico_path = png_path[:-4] + '.ico'
-        if not os.path.exists(ico_path):
-            img = Image.open(png_path)
-            img.save(ico_path, format='ICO')
-        return ico_path
-    except ImportError:
-        print("未安装 pillow 库，无法转换图标格式")
-        return png_path
-    except Exception as e:
-        print(f"转换图标格式时出错: {str(e)}")
-        return png_path
-
-def set_app_icon(root):
-    try:
-        icon_path = "icon.png"
-        if os.path.exists(icon_path):
-            if os.name == 'nt':  # Windows系统
-                ico_path = convert_png_to_ico(icon_path)
-                root.iconbitmap(ico_path)
-            else:  # Linux/Mac系统
-                img = tk.PhotoImage(file=icon_path)
-                root.tk.call('wm', 'iconphoto', root._w, img)
-    except Exception as e:
-        print(f"无法加载图标: {str(e)}")
+import sys  # 添加系统编码支持
 
 def remove_silence(input_file, silence_thresh=-40, min_silence_len=50, keep_silence=100):
     """
@@ -68,8 +41,10 @@ def remove_silence(input_file, silence_thresh=-40, min_silence_len=50, keep_sile
             print(f"Added part {i+1}, current duration: {len(combined)} ms")
 
         # 生成输出文件路径（在原文件同目录下，添加"_no_silence"后缀）
-        output_file = os.path.join(os.path.dirname(input_file), 
-                                 os.path.splitext(os.path.basename(input_file))[0] + "_no_silence.mp3")
+        output_file = os.path.join(
+            os.path.dirname(input_file), 
+            os.path.splitext(os.path.basename(input_file))[0] + "_no_silence.mp3"
+        )
         
         # 导出处理后的音频
         print(f"Exporting processed audio to: {output_file}")
@@ -94,7 +69,7 @@ class SilenceRemoverGUI:
         self.root.resizable(False, False)
         
         # 设置应用图标
-        set_app_icon(self.root)
+        self.set_app_icon()
         
         # 创建主框架
         self.main_frame = ttk.Frame(self.root, padding="10")
@@ -185,6 +160,41 @@ class SilenceRemoverGUI:
                                        command=self.start_processing)
         self.process_button.grid(row=4, column=0, columnspan=2, pady=10)
 
+    def convert_png_to_ico(self, png_path):
+        try:
+            from PIL import Image
+            ico_path = png_path[:-4] + '.ico'
+            if not os.path.exists(ico_path):
+                print(f"正在将 PNG 转换为 ICO: {png_path} -> {ico_path}")
+                img = Image.open(png_path)
+                # 确保图标大小符合 Windows 要求
+                img = img.resize((32, 32))
+                img.save(ico_path, format='ICO')
+            return ico_path
+        except Exception as e:
+            print(f"转换图标格式失败: {str(e)}")
+            return png_path
+
+    def set_app_icon(self):
+        try:
+            png_path = os.path.abspath("icon.png")
+            print(f"尝试加载图标: {png_path}")
+            print(f"图标文件是否存在: {os.path.exists(png_path)}")
+            
+            if os.path.exists(png_path):
+                if sys.platform.startswith('win'):
+                    print("正在设置 Windows 图标...")
+                    ico_path = self.convert_png_to_ico(png_path)
+                    self.root.iconbitmap(ico_path)
+                else:
+                    print("正在设置其他系统图标...")
+                    img = tk.PhotoImage(file=png_path)
+                    self.root.tk.call('wm', 'iconphoto', self.root._w, img)
+            else:
+                print(f"图标文件不存在: {png_path}")
+        except Exception as e:
+            print(f"无法加载图标: {str(e)}")
+
     def browse_file(self):
         file_path = filedialog.askopenfilename(
             title="选择音频文件",
@@ -194,6 +204,8 @@ class SilenceRemoverGUI:
             ]
         )
         if file_path:
+            # 确保路径使用正确的分隔符
+            file_path = os.path.normpath(file_path)
             self.file_path.set(file_path)
 
     def start_processing(self):
@@ -215,22 +227,24 @@ class SilenceRemoverGUI:
             self.status_var.set("正在处理...")
             self.progress_var.set(0)
             
+            input_file = os.path.normpath(self.file_path.get())
             output_file = remove_silence(
-                self.file_path.get(),
+                input_file,
                 silence_thresh=self.silence_thresh.get(),
                 min_silence_len=self.min_silence.get(),
                 keep_silence=self.keep_silence.get()
             )
             
             if output_file:
+                output_file = os.path.normpath(output_file)
                 self.progress_var.set(100)
                 self.status_var.set("处理完成！")
                 messagebox.showinfo("成功", f"静音已移除。输出文件保存为：\n{output_file}")
                 # 打开输出文件所在的文件夹
                 folder_path = os.path.dirname(output_file)
-                if os.name == 'nt':  # Windows
+                if sys.platform.startswith('win'):
                     os.startfile(folder_path)
-                elif os.name == 'posix':  # macOS 和 Linux
+                else:
                     try:
                         subprocess.run(['open', folder_path])  # macOS
                     except FileNotFoundError:
