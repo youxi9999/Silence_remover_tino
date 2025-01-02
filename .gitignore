@@ -4,9 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -21,9 +19,6 @@ wheels/
 *.egg
 
 # PyInstaller
-dist/
-build/
-*.spec
 
 # IDE
 .idea/
@@ -35,5 +30,4 @@ build/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/
-*.ico 
+$RECYCLE.BIN/ 

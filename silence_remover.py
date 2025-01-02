@@ -115,32 +115,59 @@ class SilenceRemoverGUI:
         self.params_frame = ttk.LabelFrame(self.main_frame, text="参数设置", padding="5")
         self.params_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
-        # 静音阈值滑动条
+        # 静音阈值设置
         ttk.Label(self.params_frame, text="静音阈值 (dB):").grid(row=0, column=0, padx=5)
         self.silence_thresh = tk.IntVar(value=-40)
-        self.thresh_scale = ttk.Scale(self.params_frame, from_=-60, to=-20,
-                                    variable=self.silence_thresh, orient=tk.HORIZONTAL)
+        self.thresh_scale = ttk.Scale(
+            self.params_frame,
+            from_=-60,
+            to=-20,
+            variable=self.silence_thresh,
+            orient=tk.HORIZONTAL,
+            command=lambda x: self.update_scale_value(self.silence_thresh, self.thresh_entry)
+        )
         self.thresh_scale.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
-        self.thresh_label = ttk.Label(self.params_frame, textvariable=self.silence_thresh)
-        self.thresh_label.grid(row=0, column=2, padx=5)
+        self.thresh_entry = ttk.Entry(self.params_frame, width=5)
+        self.thresh_entry.insert(0, "-40")
+        self.thresh_entry.grid(row=0, column=2, padx=5)
+        self.thresh_entry.bind('<Return>', lambda e: self.update_entry_value(
+            self.thresh_entry, self.silence_thresh, -60, -20))
         
-        # 最小静音长度滑动条
+        # 最小静音长度设置
         ttk.Label(self.params_frame, text="最小静音长度 (ms):").grid(row=1, column=0, padx=5)
         self.min_silence = tk.IntVar(value=50)
-        self.min_scale = ttk.Scale(self.params_frame, from_=0, to=500,
-                                 variable=self.min_silence, orient=tk.HORIZONTAL)
+        self.min_scale = ttk.Scale(
+            self.params_frame,
+            from_=0,
+            to=500,
+            variable=self.min_silence,
+            orient=tk.HORIZONTAL,
+            command=lambda x: self.update_scale_value(self.min_silence, self.min_entry)
+        )
         self.min_scale.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
-        self.min_label = ttk.Label(self.params_frame, textvariable=self.min_silence)
-        self.min_label.grid(row=1, column=2, padx=5)
+        self.min_entry = ttk.Entry(self.params_frame, width=5)
+        self.min_entry.insert(0, "50")
+        self.min_entry.grid(row=1, column=2, padx=5)
+        self.min_entry.bind('<Return>', lambda e: self.update_entry_value(
+            self.min_entry, self.min_silence, 0, 500))
         
-        # 保留静音长度滑动条
+        # 保留静音长度设置
         ttk.Label(self.params_frame, text="保留静音长度 (ms):").grid(row=2, column=0, padx=5)
         self.keep_silence = tk.IntVar(value=100)
-        self.keep_scale = ttk.Scale(self.params_frame, from_=0, to=500,
-                                  variable=self.keep_silence, orient=tk.HORIZONTAL)
+        self.keep_scale = ttk.Scale(
+            self.params_frame,
+            from_=0,
+            to=500,
+            variable=self.keep_silence,
+            orient=tk.HORIZONTAL,
+            command=lambda x: self.update_scale_value(self.keep_silence, self.keep_entry)
+        )
         self.keep_scale.grid(row=2, column=1, sticky=(tk.W, tk.E), padx=5)
-        self.keep_label = ttk.Label(self.params_frame, textvariable=self.keep_silence)
-        self.keep_label.grid(row=2, column=2, padx=5)
+        self.keep_entry = ttk.Entry(self.params_frame, width=5)
+        self.keep_entry.insert(0, "100")
+        self.keep_entry.grid(row=2, column=2, padx=5)
+        self.keep_entry.bind('<Return>', lambda e: self.update_entry_value(
+            self.keep_entry, self.keep_silence, 0, 500))
         
         # 进度显示
         self.progress_var = tk.DoubleVar()
@@ -220,6 +247,26 @@ class SilenceRemoverGUI:
             # 重新启用按钮
             self.process_button.state(['!disabled'])
             self.browse_button.state(['!disabled'])
+
+    def update_scale_value(self, var, entry):
+        """更新输入框的值"""
+        entry.delete(0, tk.END)
+        entry.insert(0, str(var.get()))
+
+    def update_entry_value(self, entry, var, min_val, max_val):
+        """更新滑块的值"""
+        try:
+            value = int(entry.get())
+            if min_val <= value <= max_val:
+                var.set(value)
+            else:
+                entry.delete(0, tk.END)
+                entry.insert(0, str(var.get()))
+                messagebox.showwarning("警告", f"请输入 {min_val} 到 {max_val} 之间的整数！")
+        except ValueError:
+            entry.delete(0, tk.END)
+            entry.insert(0, str(var.get()))
+            messagebox.showwarning("警告", "请输入整数！")
 
 def main():
     root = tk.Tk()
